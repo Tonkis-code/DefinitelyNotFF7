@@ -28,6 +28,20 @@ namespace DefinitelyNotFF7.api.Controllers
             };
             return Ok(character);
         }
+
+        [HttpGet("enemy")]
+        public IActionResult GetEnemy()
+        {
+            var enemy = new Enemy
+            {
+                Name = "Definitely Not Guard Scorpion",
+                MaxHealth = 100,
+                CurrentHealth = 100,
+                Attack = 15
+            };
+
+            return Ok(enemy);
+        }
         
     }
 }
