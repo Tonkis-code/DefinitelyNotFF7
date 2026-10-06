@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using DefinitelyNotFF7.api.Models;
 
 namespace DefinitelyNotFF7.api.Controllers
 {
@@ -15,5 +16,18 @@ namespace DefinitelyNotFF7.api.Controllers
                 status = "Definitely in development"
             });
         }
+        [HttpGet("character")]
+        public IActionResult GetCharacter()
+        {
+            var character = new Character
+            {
+                Name = "Definitely Not Cloud",
+                MaxHealth = 100,
+                CurrentHealth = 100,
+                Attack = 20
+            };
+            return Ok(character);
+        }
+        
     }
 }
