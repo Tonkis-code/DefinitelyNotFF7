@@ -34,6 +34,8 @@ Probably at least one suspiciously long sword.
 
 ### Backend
 
+Currently:
+
 - C#
 - ASP.NET Core
 - REST API using Controllers
@@ -44,7 +46,7 @@ Planned as the project develops:
 - PostgreSQL
 - Docker
 - Authentication
-- DTOs and service layers
+- DTOs
 - Automated tests
 
 ### Frontend
@@ -68,22 +70,53 @@ DefinitelyNotFF7/
 
 ## 🚧 Current Progress
 
-The ASP.NET Core backend has been created and the first API endpoint is working.
+The ASP.NET Core backend is up and running, and development of the core combat system has started.
 
-Current endpoint:
+Currently implemented:
+
+- ASP.NET Core REST API using Controllers
+- Character model
+- Enemy model
+- Battle model
+- Battle service for combat logic
+- Basic character attacks
+- Damage calculation
+- Health prevented from dropping below zero
+- Battle state returned through the API
+
+Current endpoints:
 
 ```http
 GET /api/Game/status
+GET /api/Game/character
+GET /api/Game/enemy
+GET /api/Game/battle
 ```
 
-Example response:
+The battle endpoint currently creates a battle between **Definitely Not Cloud** and **Definitely Not Guard Scorpion** and performs a basic attack.
+
+Example battle state after an attack:
 
 ```json
 {
-  "game": "Definitely Not FF7",
-  "status": "Definitely in development"
+  "character": {
+    "name": "Definitely Not Cloud",
+    "maxHealth": 100,
+    "currentHealth": 100,
+    "attack": 20
+  },
+  "enemy": {
+    "name": "Definitely Not Guard Scorpion",
+    "maxHealth": 150,
+    "currentHealth": 130,
+    "attack": 15
+  }
 }
 ```
+
+It's not exactly the most advanced combat system ever created.
+
+But the scorpion did, in fact, take damage.
 
 ## 🧠 Why I'm Building This
 
@@ -95,17 +128,25 @@ Rather than building everything at once, I'm developing the project incrementall
 
 ## 🗺️ What's Next?
 
-The next steps are focused on building the core game domain:
+The immediate focus is expanding the combat system:
 
-- Characters
-- Enemies
+- Enemy attacks
+- Turns and battle flow
+- Defeating enemies
+- Character defeat
 - Abilities
-- Combat
-- Damage calculation
-- Battle state
-- Run progression
+- More interesting damage calculation
+- Battle state and progression
+- Run progression and upgrades
 
-Database persistence, authentication and the Phaser frontend will be introduced later as the project grows.
+Once the core game logic is taking shape, the project will gradually introduce:
+
+- Database persistence with Entity Framework Core
+- PostgreSQL
+- Docker
+- Authentication
+- Phaser frontend
+- Automated tests
 
 ## ⚠️ Disclaimer
 
