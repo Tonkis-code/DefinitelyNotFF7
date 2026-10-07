@@ -20,5 +20,12 @@ namespace DefinitelyNotFF7.api.Services
             battle.Character.CurrentHealth = Math.Max(0, battle.Character.CurrentHealth - damage);
             return damage;
         }
+
+        public int Defend(Battle battle)
+        {
+            int damage = battle.Enemy.Attack / 2;
+            battle.Character.CurrentHealth = Math.Max(0, battle.Character.CurrentHealth - damage);
+            return damage;
+        }
     }
 }

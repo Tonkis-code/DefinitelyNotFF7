@@ -108,5 +108,46 @@ namespace DefinitelyNotFF7.api.Controllers
 
             return Ok(currentBattle);
         }
+
+        [HttpGet("battle")]
+        public IActionResult GetBattle()
+        {
+            if (currentBattle == null)
+            {
+                return NotFound();
+            }
+            
+            return Ok(currentBattle);
+            
+        }
+
+        [HttpPost("battle/defend")]
+        public IActionResult BattleDefend()
+        {
+            if (currentBattle == null)
+            {
+                return NotFound();
+            }
+
+            if (currentBattle.Winner != null)
+            {
+                return BadRequest("The battle is already over.");
+            }
+
+            var battleService = new BattleService();
+
+            battleService.Defend(currentBattle);
+
+            if (currentBattle.Enemy.CurrentHealth == 0)
+            {
+                currentBattle.Winner = currentBattle.Character.Name;
+            }
+            else if (currentBattle.Character.CurrentHealth == 0)
+            {
+                currentBattle.Winner = currentBattle.Enemy.Name;
+            }
+
+            return Ok(currentBattle);
+        }
     }
 }
