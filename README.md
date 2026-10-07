@@ -39,6 +39,7 @@ Currently:
 - C#
 - ASP.NET Core
 - REST API using Controllers
+- Swagger UI / OpenAPI
 
 Planned as the project develops:
 
@@ -70,7 +71,7 @@ DefinitelyNotFF7/
 
 ## 🚧 Current Progress
 
-The ASP.NET Core backend is up and running, and development of the core combat system has started.
+The ASP.NET Core backend is up and running, and development of the core turn-based combat system has started.
 
 Currently implemented:
 
@@ -79,30 +80,63 @@ Currently implemented:
 - Enemy model
 - Battle model
 - Battle service for combat logic
+- Stateful battles across API requests
 - Basic character attacks
+- Enemy attacks
+- Defending with reduced incoming damage
 - Damage calculation
 - Health prevented from dropping below zero
-- Battle state returned through the API
+- Winner tracking
+- Prevention of further actions after a battle has ended
+- Swagger UI for testing the API
 
 Current endpoints:
 
 ```http
-GET /api/Game/status
-GET /api/Game/character
-GET /api/Game/enemy
+GET  /api/Game/status
+GET  /api/Game/character
+GET  /api/Game/enemy
+
+POST /api/Game/battle/start
+GET  /api/Game/battle
+POST /api/Game/battle/attack
+POST /api/Game/battle/defend
+```
+
+A battle can currently be started between **Definitely Not Cloud** and **Definitely Not Guard Scorpion**.
+
+Each combat action is handled through a separate API request while the current battle state is preserved between turns.
+
+The player can attack:
+
+```http
+POST /api/Game/battle/attack
+```
+
+This damages the enemy before it retaliates.
+
+The player can also defend:
+
+```http
+POST /api/Game/battle/defend
+```
+
+Defending skips the player's attack but reduces the incoming enemy damage.
+
+The current battle can be inspected without performing an action:
+
+```http
 GET /api/Game/battle
 ```
 
-The battle endpoint currently creates a battle between **Definitely Not Cloud** and **Definitely Not Guard Scorpion** and performs a basic attack.
-
-Example battle state after an attack:
+Example battle state after one attack and one defend:
 
 ```json
 {
   "character": {
     "name": "Definitely Not Cloud",
     "maxHealth": 100,
-    "currentHealth": 100,
+    "currentHealth": 78,
     "attack": 20
   },
   "enemy": {
@@ -110,13 +144,14 @@ Example battle state after an attack:
     "maxHealth": 150,
     "currentHealth": 130,
     "attack": 15
-  }
+  },
+  "winner": null
 }
 ```
 
-It's not exactly the most advanced combat system ever created.
+It's still not exactly the most advanced combat system ever created.
 
-But the scorpion did, in fact, take damage.
+But now the scorpion can hit back.
 
 ## 🧠 Why I'm Building This
 
@@ -130,13 +165,12 @@ Rather than building everything at once, I'm developing the project incrementall
 
 The immediate focus is expanding the combat system:
 
-- Enemy attacks
-- Turns and battle flow
-- Defeating enemies
-- Character defeat
-- Abilities
+- More player actions and abilities
+- Turn management
 - More interesting damage calculation
-- Battle state and progression
+- Battle logs and combat feedback
+- Different characters and enemies
+- Battle progression
 - Run progression and upgrades
 
 Once the core game logic is taking shape, the project will gradually introduce:
