@@ -71,7 +71,8 @@ namespace DefinitelyNotFF7.api.Controllers
 
             var battleService = new BattleService();
 
-            int damage = battleService.Attack(battle);
+            int characterDamage = battleService.Attack(battle);
+            int enemyDamage = battleService.EnemyAttack(battle);
 
             return Ok(battle);
 
