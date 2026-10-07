@@ -4,5 +4,6 @@
     {
         public required Character Character {  get; set; }
         public required Enemy Enemy { get; set; }
+        public string? Winner { get; set; }
     }
 }

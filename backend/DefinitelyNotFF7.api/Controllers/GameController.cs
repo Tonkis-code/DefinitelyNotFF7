@@ -71,8 +71,24 @@ namespace DefinitelyNotFF7.api.Controllers
 
             var battleService = new BattleService();
 
-            int characterDamage = battleService.Attack(battle);
-            int enemyDamage = battleService.EnemyAttack(battle);
+            while (battle.Character.CurrentHealth > 0 && battle.Enemy.CurrentHealth > 0)
+            {
+                battleService.Attack(battle);
+
+                if (battle.Enemy.CurrentHealth > 0)
+                {
+                    battleService.EnemyAttack(battle);
+                }
+
+            }
+            if (battle.Enemy.CurrentHealth == 0)
+            {
+                battle.Winner = battle.Character.Name;
+            }
+            else
+            {
+                battle.Winner = battle.Enemy.Name;
+            }
 
             return Ok(battle);
 
