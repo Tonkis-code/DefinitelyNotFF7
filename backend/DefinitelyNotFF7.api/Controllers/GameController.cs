@@ -55,6 +55,8 @@ namespace DefinitelyNotFF7.api.Controllers
                 Name = "Definitely Not Cloud",
                 MaxHealth = 100,
                 CurrentHealth = 100,
+                CurrentAtb = 0,
+                MaxAtb = 2,
                 Attack = 20
             };
 
@@ -91,6 +93,47 @@ namespace DefinitelyNotFF7.api.Controllers
             var battleService = new BattleService();
 
             battleService.Attack(currentBattle);
+
+            if (currentBattle.Enemy.CurrentHealth > 0)
+            {
+                battleService.EnemyAttack(currentBattle);
+            }
+
+            if (currentBattle.Enemy.CurrentHealth == 0)
+            {
+                currentBattle.Winner = currentBattle.Character.Name;
+            }
+            else if (currentBattle.Character.CurrentHealth == 0)
+            {
+                currentBattle.Winner = currentBattle.Enemy.Name;
+            }
+
+            return Ok(currentBattle);
+        }
+
+        [HttpPost("battle/braver")]
+        public IActionResult BattleBraver()
+        {
+            if (currentBattle == null)
+            {
+                return NotFound();
+            }
+
+            if (currentBattle.Winner != null)
+            {
+                return BadRequest("The battle is already over.");
+            }
+
+            var battleService = new BattleService();
+
+            try
+            {
+                battleService.Braver(currentBattle);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             if (currentBattle.Enemy.CurrentHealth > 0)
             {

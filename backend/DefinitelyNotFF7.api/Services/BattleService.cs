@@ -1,4 +1,5 @@
 ﻿using DefinitelyNotFF7.api.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DefinitelyNotFF7.api.Services
 {
@@ -9,6 +10,7 @@ namespace DefinitelyNotFF7.api.Services
         {
             int damage = battle.Character.Attack;
             battle.Enemy.CurrentHealth = Math.Max(0, battle.Enemy.CurrentHealth - damage);
+            battle.Character.CurrentAtb = Math.Min(battle.Character.MaxAtb, battle.Character.CurrentAtb + 1);
             return damage;
 
         }
@@ -25,6 +27,19 @@ namespace DefinitelyNotFF7.api.Services
         {
             int damage = battle.Enemy.Attack / 2;
             battle.Character.CurrentHealth = Math.Max(0, battle.Character.CurrentHealth - damage);
+            battle.Character.CurrentAtb = Math.Min(battle.Character.MaxAtb, battle.Character.CurrentAtb + 1);
+            return damage;
+        }
+
+        public int Braver(Battle battle)
+        {
+            if (battle.Character.CurrentAtb < 1)
+            {
+                throw new InvalidOperationException("Not Enough ATB!");
+            }
+            battle.Character.CurrentAtb = battle.Character.CurrentAtb - 1;
+            int damage = battle.Character.Attack * 2;
+            battle.Enemy.CurrentHealth = Math.Max(0, battle.Enemy.CurrentHealth - damage);
             return damage;
         }
     }
