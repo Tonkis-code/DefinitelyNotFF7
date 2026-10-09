@@ -10,6 +10,7 @@ namespace DefinitelyNotFF7.api.Controllers
     public class GameController : ControllerBase
     {
         private static Battle? currentBattle;
+        private static GameSession? currentSession;
 
         [HttpGet("status")]
         public IActionResult GetStatus()
@@ -47,10 +48,10 @@ namespace DefinitelyNotFF7.api.Controllers
             return Ok(enemy);
         }
 
-
-        [HttpPost("battle/start")]
-        public IActionResult StartBattle(string enemyType)
+        [HttpPost("run/start")]
+        public IActionResult StartRun()
         {
+
             var character = new Character
             {
                 Name = "Definitely Not Cloud",
@@ -63,6 +64,32 @@ namespace DefinitelyNotFF7.api.Controllers
                 CurrentXp = 0,
                 XpToNextLevel = 100
             };
+
+            currentSession = new GameSession
+            {
+                Character = character,
+                IsActive = true
+            };
+
+            currentBattle = null;
+
+            return Ok(currentSession);
+        }
+
+        [HttpPost("battle/start")]
+        public IActionResult StartBattle(string enemyType)
+        {
+            // Makes sure players cant start a battle without starting a run
+            if (currentSession == null || currentSession.IsActive == false)
+            {
+                return BadRequest("No active run. Start a new run first.");
+            }
+
+            // Prevent players from skipping an unfinished encounter.
+            if (currentBattle != null && currentBattle.Winner == null)
+            {
+                return BadRequest("A battle is already in progress.");
+            }
 
             var enemyFactory = new EnemyFactory();
 
@@ -77,11 +104,13 @@ namespace DefinitelyNotFF7.api.Controllers
                 return BadRequest(ex.Message);
             }
 
+            // Reuse the same character so progression persists between encounters.
             currentBattle = new Battle
             {
-                Character = character,
+                Character = currentSession.Character,
                 Enemy = enemy
             };
+
 
             return Ok(currentBattle);
         }
@@ -110,6 +139,7 @@ namespace DefinitelyNotFF7.api.Controllers
 
             battleService.CheckWinner(currentBattle);
             AwardBattleXp();
+            CheckRunEnd();
 
             return Ok(currentBattle);
         }
@@ -158,6 +188,7 @@ namespace DefinitelyNotFF7.api.Controllers
 
             battleService.CheckWinner(currentBattle);
             AwardBattleXp();
+            CheckRunEnd();
 
             return Ok(currentBattle);
         }
@@ -193,6 +224,8 @@ namespace DefinitelyNotFF7.api.Controllers
 
             battleService.CheckWinner(currentBattle);
 
+            CheckRunEnd();
+
             return Ok(currentBattle);
         }
 
@@ -207,6 +240,14 @@ namespace DefinitelyNotFF7.api.Controllers
             if (currentBattle.Winner == currentBattle.Character.Name)
             {
                 levelingService.GainXp(currentBattle.Character, currentBattle.Enemy.XpReward);
+            }
+        }
+
+        private void CheckRunEnd()
+        {
+            if (currentBattle != null && currentSession != null && currentBattle.Winner == currentBattle.Enemy.Name)
+            {
+                currentSession.IsActive = false;
             }
         }
     }
