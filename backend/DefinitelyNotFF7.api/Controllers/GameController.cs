@@ -99,14 +99,7 @@ namespace DefinitelyNotFF7.api.Controllers
                 battleService.EnemyAttack(currentBattle);
             }
 
-            if (currentBattle.Enemy.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Character.Name;
-            }
-            else if (currentBattle.Character.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Enemy.Name;
-            }
+            battleService.CheckWinner(currentBattle);
 
             return Ok(currentBattle);
         }
@@ -153,14 +146,7 @@ namespace DefinitelyNotFF7.api.Controllers
                 battleService.EnemyAttack(currentBattle);
             }
 
-            if (currentBattle.Enemy.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Character.Name;
-            }
-            else if (currentBattle.Character.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Enemy.Name;
-            }
+            battleService.CheckWinner(currentBattle);
 
             return Ok(currentBattle);
         }
@@ -194,14 +180,7 @@ namespace DefinitelyNotFF7.api.Controllers
 
             battleService.Defend(currentBattle);
 
-            if (currentBattle.Enemy.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Character.Name;
-            }
-            else if (currentBattle.Character.CurrentHealth == 0)
-            {
-                currentBattle.Winner = currentBattle.Enemy.Name;
-            }
+            battleService.CheckWinner(currentBattle);
 
             return Ok(currentBattle);
         }

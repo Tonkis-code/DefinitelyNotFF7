@@ -54,5 +54,17 @@ namespace DefinitelyNotFF7.api.Services
             battle.Enemy.CurrentHealth = Math.Max(0, battle.Enemy.CurrentHealth - damage);
             return damage;
         }
+
+        public void CheckWinner(Battle battle)
+        {
+            if (battle.Enemy.CurrentHealth == 0)
+            {
+                battle.Winner = battle.Character.Name;
+            }
+            else if (battle.Character.CurrentHealth == 0)
+            {
+                battle.Winner = battle.Enemy.Name;
+            }
+        }
     }
 }
