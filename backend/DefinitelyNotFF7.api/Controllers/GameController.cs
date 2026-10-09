@@ -111,8 +111,8 @@ namespace DefinitelyNotFF7.api.Controllers
             return Ok(currentBattle);
         }
 
-        [HttpPost("battle/braver")]
-        public IActionResult BattleBraver()
+        [HttpPost("battle/ability")]
+        public IActionResult BattleAbility(string ability)
         {
             if (currentBattle == null)
             {
@@ -128,7 +128,20 @@ namespace DefinitelyNotFF7.api.Controllers
 
             try
             {
-                battleService.Braver(currentBattle);
+                switch (ability)
+                {
+                    case "Braver":
+                        battleService.Braver(currentBattle);
+                        break;
+
+                    case "FocusedThrust":
+                        battleService.FocusedThrust(currentBattle);
+                        break;
+
+                    default:
+                        return BadRequest("Unknown ability.");
+
+                }
             }
             catch (InvalidOperationException ex)
             {

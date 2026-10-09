@@ -37,8 +37,20 @@ namespace DefinitelyNotFF7.api.Services
             {
                 throw new InvalidOperationException("Not Enough ATB!");
             }
-            battle.Character.CurrentAtb = battle.Character.CurrentAtb - 1;
+            battle.Character.CurrentAtb -= 1;
             int damage = battle.Character.Attack * 2;
+            battle.Enemy.CurrentHealth = Math.Max(0, battle.Enemy.CurrentHealth - damage);
+            return damage;
+        }
+
+        public int FocusedThrust(Battle battle)
+        {
+            if (battle.Character.CurrentAtb < 2)
+            {
+                throw new InvalidOperationException("Not Enough ATB!");
+            }
+            battle.Character.CurrentAtb -= 2;
+            int damage = battle.Character.Attack * 4;
             battle.Enemy.CurrentHealth = Math.Max(0, battle.Enemy.CurrentHealth - damage);
             return damage;
         }
