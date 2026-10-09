@@ -11,6 +11,7 @@ namespace DefinitelyNotFF7.api.Controllers
     {
         private static Battle? currentBattle;
         private static GameSession? currentSession;
+        private static PlayerProgress? currentProgress;
 
         [HttpGet("status")]
         public IActionResult GetStatus()
@@ -51,7 +52,7 @@ namespace DefinitelyNotFF7.api.Controllers
         [HttpPost("run/start")]
         public IActionResult StartRun()
         {
-
+       
             var character = new Character
             {
                 Name = "Definitely Not Cloud",
@@ -72,6 +73,11 @@ namespace DefinitelyNotFF7.api.Controllers
             };
 
             currentBattle = null;
+
+            if (currentProgress == null)
+            {
+                currentProgress = CreatePlayerProgress();
+            }
 
             return Ok(currentSession);
         }
@@ -240,6 +246,8 @@ namespace DefinitelyNotFF7.api.Controllers
             if (currentBattle.Winner == currentBattle.Character.Name)
             {
                 levelingService.GainXp(currentBattle.Character, currentBattle.Enemy.XpReward);
+
+                CheckAbilityUnlocks();
             }
         }
 
@@ -248,6 +256,26 @@ namespace DefinitelyNotFF7.api.Controllers
             if (currentBattle != null && currentSession != null && currentBattle.Winner == currentBattle.Enemy.Name)
             {
                 currentSession.IsActive = false;
+            }
+        }
+
+        private PlayerProgress CreatePlayerProgress()
+        {
+            var progress = new PlayerProgress
+            {
+                UnlockedAbilities = new List<string> { "Braver" }
+            };
+            return progress;
+        }
+
+        private void CheckAbilityUnlocks()
+        {
+            if (currentSession != null && currentProgress != null)
+            {
+                if (currentSession.Character.Level >= 3 && !currentProgress.UnlockedAbilities.Contains("FocusedThrust"))
+                {
+                    currentProgress.UnlockedAbilities.Add("FocusedThrust");
+                }
             }
         }
     }
