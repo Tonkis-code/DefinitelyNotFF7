@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using DefinitelyNotFF7.api.Models;
 using DefinitelyNotFF7.api.Services;
+using DefinitelyNotFF7.api.Factories;
 
 namespace DefinitelyNotFF7.api.Controllers
 {
@@ -48,7 +49,7 @@ namespace DefinitelyNotFF7.api.Controllers
 
 
         [HttpPost("battle/start")]
-        public IActionResult StartBattle()
+        public IActionResult StartBattle(string enemyType)
         {
             var character = new Character
             {
@@ -60,13 +61,18 @@ namespace DefinitelyNotFF7.api.Controllers
                 Attack = 20
             };
 
-            var enemy = new Enemy
+            var enemyFactory = new EnemyFactory();
+
+            Enemy enemy;
+
+            try
             {
-                Name = "Definitely Not Guard Scorpion",
-                MaxHealth = 150,
-                CurrentHealth = 150,
-                Attack = 15
-            };
+                enemy = enemyFactory.CreateEnemy(enemyType);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             currentBattle = new Battle
             {
