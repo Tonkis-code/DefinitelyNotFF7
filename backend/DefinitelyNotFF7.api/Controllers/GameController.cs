@@ -58,7 +58,10 @@ namespace DefinitelyNotFF7.api.Controllers
                 CurrentHealth = 100,
                 CurrentAtb = 0,
                 MaxAtb = 2,
-                Attack = 20
+                Attack = 20,
+                Level = 1,
+                CurrentXp = 0,
+                XpToNextLevel = 100
             };
 
             var enemyFactory = new EnemyFactory();
@@ -106,6 +109,7 @@ namespace DefinitelyNotFF7.api.Controllers
             }
 
             battleService.CheckWinner(currentBattle);
+            AwardBattleXp();
 
             return Ok(currentBattle);
         }
@@ -153,6 +157,7 @@ namespace DefinitelyNotFF7.api.Controllers
             }
 
             battleService.CheckWinner(currentBattle);
+            AwardBattleXp();
 
             return Ok(currentBattle);
         }
@@ -189,6 +194,20 @@ namespace DefinitelyNotFF7.api.Controllers
             battleService.CheckWinner(currentBattle);
 
             return Ok(currentBattle);
+        }
+
+        private void AwardBattleXp()
+        {
+            if (currentBattle == null)
+            {
+                return;
+            }
+            var levelingService = new LevelingService();
+
+            if (currentBattle.Winner == currentBattle.Character.Name)
+            {
+                levelingService.GainXp(currentBattle.Character, currentBattle.Enemy.XpReward);
+            }
         }
     }
 }
