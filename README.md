@@ -6,7 +6,7 @@
 
 The project is primarily an opportunity for me to improve my skills in **C# and ASP.NET Core** while gradually building a complete game with a separate frontend and backend.
 
-The backend currently features a playable combat prototype with an ATB-inspired ability system, enemy encounters, experience points, character leveling and basic roguelite run progression.
+The backend currently features a playable combat prototype with an ATB-inspired ability system, enemy encounters, experience points, character leveling, post-battle healing and roguelite progression with ability unlocks retained between runs (currently in memory).
 
 The project is still in early development.
 
@@ -18,7 +18,7 @@ Players will start a run with a fresh character, battle enemies, earn experience
 
 Unlike traditional RPG progression, character levels and temporary stats reset when a run ends.
 
-However, the long-term goal is to introduce **permanent progression**, allowing players to retain unlocked abilities and eventually improve how much their stats increase when leveling up.
+Ability unlocks now persist between runs while the API is running. The long-term goal is to save permanent progression to a database and introduce upgrades that improve stat growth on level-up.
 
 The planned gameplay loop looks something like this:
 
@@ -49,7 +49,7 @@ Currently implemented using:
 - REST API using Controllers
 - Swagger UI / OpenAPI
 - Object-oriented programming
-- Service classes for combat and leveling logic
+- Service classes for combat, leveling and healing logic
 - Factory pattern for enemy creation
 
 Planned as the project develops:
@@ -85,10 +85,12 @@ DefinitelyNotFF7/
 │       │   ├── Battle.cs
 │       │   ├── Character.cs
 │       │   ├── Enemy.cs
-│       │   └── GameSession.cs
+│       │   ├── GameSession.cs
+│       │   └── PlayerProgress.cs
 │       └── Services/
 │           ├── BattleService.cs
-│           └── LevelingService.cs
+│           ├── LevelingService.cs
+│           └── HealingService.cs
 ├── frontend/                 # Planned
 ├── docker-compose.yml        # Planned
 └── README.md
@@ -111,7 +113,7 @@ Currently implemented:
 - ATB generation through attacking and defending
 - ATB-based special abilities
 - ATB costs and validation
-- Winner detection
+- Winner detection and one-time battle outcome processing
 - Prevention of combat actions after a battle has ended
 - Prevention of starting another encounter during an unfinished battle
 
@@ -140,7 +142,9 @@ POST /api/Game/battle/ability?ability=FocusedThrust
 
 Attempting to use an ability without enough ATB returns a `400 Bad Request` response.
 
-Invalid ability names are also handled.
+Abilities must also be unlocked before they can be used. **Braver** is available from the start, while **Focused Thrust** unlocks when the character reaches level 3. Once unlocked, it remains available in later runs while the API is running.
+
+Unknown or locked ability names are rejected.
 
 ### 👾 Enemy System
 
@@ -205,6 +209,16 @@ For example, a character earning 300 XP from level 1 would reach level 3 with 50
 
 These values are temporary balancing choices and will likely change as development continues.
 
+### ❤️ Post-Battle Healing and Outcome Handling
+
+After a victory, the game awards XP, checks for newly unlocked abilities and automatically restores **25% of the character's maximum HP**.
+
+Healing is handled by a dedicated `HealingService`. The amount is rounded to the nearest whole number (with `.5` rounding upward), and current HP cannot exceed maximum HP. Because XP is awarded first, healing uses the updated maximum HP if the character levels up.
+
+Battle outcomes are processed only once using `IsOutcomeProcessed`, preventing duplicate XP and healing. On defeat, the current run ends instead.
+
+Automatic healing is a prototype mechanic. The longer-term plan is to offer post-battle choices such as healing, Gil or Materia.
+
 ### 🔄 Roguelite Run System
 
 A basic run lifecycle has been implemented using a `GameSession` model.
@@ -237,8 +251,9 @@ This means that:
 - Players cannot start battles without an active run.
 - Losing a battle ends the current run.
 - Starting a new run resets temporary character progression.
+- Unlocked abilities persist across runs using a separate `PlayerProgress` object.
 
-The run system currently operates in memory using a single shared game session.
+The run system currently operates in memory using a single shared game session. Ability unlocks survive starting a new run, **but they reset when the API restarts**.
 
 Database persistence and individual player sessions have not yet been implemented.
 
@@ -262,19 +277,19 @@ The character and enemy GET endpoints currently return sample objects rather tha
 
 ### Example Battle Response
 
-A battle response after defeating a Scorpion and leveling up:
+An actual Swagger response after defeating a Scorpion with Braver, leveling up and receiving post-battle healing:
 
 ```json
 {
   "character": {
     "name": "Definitely Not Cloud",
     "maxHealth": 110,
-    "currentHealth": 45,
+    "currentHealth": 79,
     "attack": 23,
-    "currentAtb": 2,
+    "currentAtb": 0,
     "maxAtb": 2,
     "level": 2,
-    "currentXp": 40,
+    "currentXp": 0,
     "xpToNextLevel": 150
   },
   "enemy": {
@@ -284,15 +299,18 @@ A battle response after defeating a Scorpion and leveling up:
     "attack": 15,
     "xpReward": 100
   },
-  "winner": "Definitely Not Cloud"
+  "winner": "Definitely Not Cloud",
+  "isOutcomeProcessed": true
 }
 ```
 
-The character's stats reflect progression earned during the current run.
+Cloud had 41 HP before the finishing blow. Leveling up restored 10 HP, and healing restored another 28 HP (25% of the new 110 Max HP, rounded upward), resulting in **79 HP**.
+
+The battle cannot be rewarded a second time, and combat actions after victory are rejected.
 
 It's still not exactly the most advanced combat system ever created.
 
-But now the scorpion can hit back, Cloud can level up, and dying actually has consequences.
+But now the scorpion can hit back, Cloud can level up, heal after battle, unlock Focused Thrust, and keep that unlock even after dying and starting a new run.
 
 Progress.
 
@@ -313,6 +331,8 @@ Some of the concepts I'm practicing include:
 - Service-oriented code organization
 - Factory pattern
 - Game state management
+- One-time battle outcome processing
+- In-memory progression across runs
 - Character progression systems
 - Separating business logic from controllers
 
@@ -325,7 +345,7 @@ The goal isn't just to finish a game, but to understand how the systems behind i
 ### Gameplay and Combat
 
 - Expand the available abilities
-- Introduce ability unlocks based on character levels
+- Add more level-based ability unlocks
 - Improve turn management and ATB mechanics
 - Add combat logs and feedback
 - Expand enemy variety
@@ -336,9 +356,9 @@ The goal isn't just to finish a game, but to understand how the systems behind i
 
 ### Roguelite Progression
 
-- Separate permanent player progression from temporary run progression
-- Retain unlocked abilities between runs
+- Persist permanent player progression across API restarts
 - Introduce permanent stat-growth upgrades
+- Replace automatic post-battle healing with selectable rewards (healing, Gil, Materia)
 - Add rewards and upgrade choices between encounters
 - Expand run management
 - Introduce difficulty scaling and progression through floors
