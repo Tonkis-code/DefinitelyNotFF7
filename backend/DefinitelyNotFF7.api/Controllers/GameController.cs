@@ -52,7 +52,7 @@ namespace DefinitelyNotFF7.api.Controllers
         [HttpPost("run/start")]
         public IActionResult StartRun()
         {
-       
+
             var character = new Character
             {
                 Name = "Definitely Not Cloud",
@@ -144,8 +144,7 @@ namespace DefinitelyNotFF7.api.Controllers
             }
 
             battleService.CheckWinner(currentBattle);
-            AwardBattleXp();
-            CheckRunEnd();
+            HandleBattleOutcome();
 
             return Ok(currentBattle);
         }
@@ -162,6 +161,12 @@ namespace DefinitelyNotFF7.api.Controllers
             {
                 return BadRequest("The battle is already over.");
             }
+
+            if (currentProgress == null || !currentProgress.UnlockedAbilities.Contains(ability))
+            {
+                return BadRequest("Ability is not unlocked.");
+            }
+
 
             var battleService = new BattleService();
 
@@ -193,8 +198,7 @@ namespace DefinitelyNotFF7.api.Controllers
             }
 
             battleService.CheckWinner(currentBattle);
-            AwardBattleXp();
-            CheckRunEnd();
+            HandleBattleOutcome();
 
             return Ok(currentBattle);
         }
@@ -206,9 +210,9 @@ namespace DefinitelyNotFF7.api.Controllers
             {
                 return NotFound();
             }
-            
+
             return Ok(currentBattle);
-            
+
         }
 
         [HttpPost("battle/defend")]
@@ -229,8 +233,7 @@ namespace DefinitelyNotFF7.api.Controllers
             battleService.Defend(currentBattle);
 
             battleService.CheckWinner(currentBattle);
-
-            CheckRunEnd();
+            HandleBattleOutcome();
 
             return Ok(currentBattle);
         }
@@ -276,6 +279,32 @@ namespace DefinitelyNotFF7.api.Controllers
                 {
                     currentProgress.UnlockedAbilities.Add("FocusedThrust");
                 }
+            }
+        }
+
+        private void HandleBattleOutcome()
+        {
+            if (currentBattle == null || currentBattle.Winner == null)
+            {
+                return;
+            }
+
+            if (currentBattle.IsOutcomeProcessed)
+            {
+                return;
+            }
+
+            currentBattle.IsOutcomeProcessed = true;
+
+            if (currentBattle.Winner == currentBattle.Character.Name)
+            {
+                AwardBattleXp();
+                var healingService = new HealingService();
+                healingService.HealCharacter(currentBattle.Character);
+            }
+            else if (currentBattle.Winner == currentBattle.Enemy.Name)
+            {
+                CheckRunEnd();
             }
         }
     }
