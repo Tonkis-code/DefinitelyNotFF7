@@ -10,5 +10,11 @@ namespace DefinitelyNotFF7.api.Services
             int healingAmount = (int)Math.Round(healing, MidpointRounding.AwayFromZero);
             character.CurrentHealth = Math.Min(character.MaxHealth, character.CurrentHealth + healingAmount);
         }
+        public void UsePotion(Character character)
+        {
+            double healing = character.MaxHealth * 0.30;
+            int potionAmount = (int)Math.Round(healing, MidpointRounding.AwayFromZero);
+            character.CurrentHealth = Math.Min(character.MaxHealth, character.CurrentHealth + potionAmount);
+        }
     }
 }

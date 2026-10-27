@@ -241,6 +241,55 @@ namespace DefinitelyNotFF7.api.Controllers
             return Ok(currentBattle);
         }
 
+        [HttpPost("battle/potion")]
+        public IActionResult BattlePotion()
+        {
+
+            if (currentSession == null || currentSession.IsActive == false)
+            {
+                return BadRequest("No active run. Start a new run first.");
+            }
+
+            if (currentBattle == null)
+            {
+                return NotFound();
+            }
+
+            if (currentBattle.Winner != null)
+            {
+                return BadRequest("The battle is already over.");
+            }
+
+            if (currentSession.Potions <= 0)
+            {
+                return BadRequest("No potions left in inventory.");
+            }
+
+            if (currentBattle.Character.CurrentHealth >= currentBattle.Character.MaxHealth)
+            {
+                return BadRequest($"{currentBattle.Character.Name} has full health");
+            }
+
+            var healingService = new HealingService();
+            var battleService = new BattleService();
+
+            healingService.UsePotion(currentBattle.Character);
+            currentSession.Potions--;
+            if (currentBattle.Enemy.CurrentHealth > 0)
+            {
+                battleService.EnemyAttack(currentBattle);
+            }
+
+            battleService.CheckWinner(currentBattle);
+            HandleBattleOutcome();
+
+            return Ok(new
+            {
+                Battle = currentBattle,
+                PotionsRemaining = currentSession.Potions
+            });
+        }
+
         private void AwardBattleXp()
         {
             if (currentBattle == null)
@@ -297,6 +346,8 @@ namespace DefinitelyNotFF7.api.Controllers
                 return;
             }
 
+
+
             currentBattle.IsOutcomeProcessed = true;
 
             if (currentBattle.Winner == currentBattle.Character.Name && currentSession != null)
@@ -305,6 +356,13 @@ namespace DefinitelyNotFF7.api.Controllers
                 var healingService = new HealingService();
                 healingService.HealCharacter(currentBattle.Character);
                 currentSession.EncounterNumber++;
+                int roll = Random.Shared.Next(1, 101);
+
+                if (roll <= 30)
+                {
+                    currentSession.Potions++;
+                    currentBattle.PotionDropped = true;
+                }
             }
             else if (currentBattle.Winner == currentBattle.Enemy.Name)
             {
