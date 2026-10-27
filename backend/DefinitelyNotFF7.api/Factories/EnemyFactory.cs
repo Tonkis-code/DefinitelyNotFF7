@@ -4,17 +4,20 @@ namespace DefinitelyNotFF7.api.Factories
 {
     public class EnemyFactory
     {
-        public Enemy CreateEnemy(string enemyType)
+        public Enemy CreateEnemy(string enemyType, int floor)
         {
+            double healthMultiplier = 1 + (floor - 1) * 0.1;
+            double attackMultiplier = 1 + (floor - 1) * 0.05;
+
             switch (enemyType)
             {
                 case "Grunt":
                     return new Enemy
                     {
                         Name = "Definitely Not Shinra Grunt",
-                        MaxHealth = 60,
-                        CurrentHealth = 60,
-                        Attack = 10,
+                        MaxHealth = (int)Math.Round(60 * healthMultiplier),
+                        CurrentHealth = (int)Math.Round(60 * healthMultiplier),
+                        Attack = (int)Math.Round(10 * attackMultiplier),
                         XpReward = 40
                     };
 
@@ -22,9 +25,9 @@ namespace DefinitelyNotFF7.api.Factories
                     return new Enemy
                     {
                         Name = "Definitely Not Scorpion",
-                        MaxHealth = 125,
-                        CurrentHealth = 125,
-                        Attack = 15,
+                        MaxHealth = (int)Math.Round(125 * healthMultiplier),
+                        CurrentHealth = (int)Math.Round(125 * healthMultiplier),
+                        Attack = (int)Math.Round(15 * attackMultiplier),
                         XpReward = 100
                     };
 

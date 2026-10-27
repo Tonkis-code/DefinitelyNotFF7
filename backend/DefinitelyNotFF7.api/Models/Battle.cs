@@ -6,5 +6,6 @@
         public required Enemy Enemy { get; set; }
         public string? Winner { get; set; }
         public bool IsOutcomeProcessed { get; set; } = false;
+        public int CurrentFloor { get; set; }
     }
 }

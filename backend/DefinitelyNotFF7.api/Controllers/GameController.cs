@@ -19,7 +19,9 @@ namespace DefinitelyNotFF7.api.Controllers
             return Ok(new
             {
                 game = "Definitely Not FF7",
-                status = "Definitely in development"
+                status = "Definitely in development",
+                runActive = currentSession?.IsActive ?? false,
+                encounterNumber = currentSession?.EncounterNumber ?? 0
             });
         }
         [HttpGet("character")]
@@ -100,10 +102,10 @@ namespace DefinitelyNotFF7.api.Controllers
             var enemyFactory = new EnemyFactory();
 
             Enemy enemy;
-
+            int floor = currentSession.EncounterNumber + 1;
             try
-            {
-                enemy = enemyFactory.CreateEnemy(enemyType);
+            {        
+                enemy = enemyFactory.CreateEnemy(enemyType, floor);
             }
             catch (InvalidOperationException ex)
             {
@@ -114,7 +116,8 @@ namespace DefinitelyNotFF7.api.Controllers
             currentBattle = new Battle
             {
                 Character = currentSession.Character,
-                Enemy = enemy
+                Enemy = enemy,
+                CurrentFloor = floor
             };
 
 
@@ -296,11 +299,12 @@ namespace DefinitelyNotFF7.api.Controllers
 
             currentBattle.IsOutcomeProcessed = true;
 
-            if (currentBattle.Winner == currentBattle.Character.Name)
+            if (currentBattle.Winner == currentBattle.Character.Name && currentSession != null)
             {
                 AwardBattleXp();
                 var healingService = new HealingService();
                 healingService.HealCharacter(currentBattle.Character);
+                currentSession.EncounterNumber++;
             }
             else if (currentBattle.Winner == currentBattle.Enemy.Name)
             {

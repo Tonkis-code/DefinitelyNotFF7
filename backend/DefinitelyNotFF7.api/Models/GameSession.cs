@@ -4,5 +4,7 @@
     {
         public required Character Character {  get; set; }
         public bool IsActive { get; set; }
+        public int EncounterNumber { get; set; }
+        
     }
 }
