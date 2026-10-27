@@ -16,6 +16,8 @@ namespace DefinitelyNotFF7.api.Services
                 character.MaxHealth += 10;
                 character.CurrentHealth += 10;
                 character.Attack += 3;
+                character.MaxMp += 5;
+                character.CurrentMp += 5;
             }            
         }
     }

@@ -1,9 +1,12 @@
+using DefinitelyNotFF7.api.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSingleton<GameStateService>();
+builder.Services.AddScoped<BattleOutcomeService>();
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

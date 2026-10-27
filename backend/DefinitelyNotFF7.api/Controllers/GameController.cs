@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using DefinitelyNotFF7.api.Models;
 using DefinitelyNotFF7.api.Services;
 using DefinitelyNotFF7.api.Factories;
@@ -9,9 +10,14 @@ namespace DefinitelyNotFF7.api.Controllers
     [Route("api/[controller]")]
     public class GameController : ControllerBase
     {
-        private static Battle? currentBattle;
-        private static GameSession? currentSession;
-        private static PlayerProgress? currentProgress;
+        private readonly GameStateService _gameState;
+        private readonly BattleOutcomeService _battleOutcome;
+
+        public GameController(GameStateService gameState, BattleOutcomeService battleOutcome)
+        {
+            _gameState = gameState;
+            _battleOutcome = battleOutcome;
+        }
 
         [HttpGet("status")]
         public IActionResult GetStatus()
@@ -20,10 +26,11 @@ namespace DefinitelyNotFF7.api.Controllers
             {
                 game = "Definitely Not FF7",
                 status = "Definitely in development",
-                runActive = currentSession?.IsActive ?? false,
-                encounterNumber = currentSession?.EncounterNumber ?? 0
+                runActive = _gameState.CurrentSession?.IsActive ?? false,
+                encounterNumber = _gameState.CurrentSession?.EncounterNumber ?? 0
             });
         }
+
         [HttpGet("character")]
         public IActionResult GetCharacter()
         {
@@ -34,6 +41,7 @@ namespace DefinitelyNotFF7.api.Controllers
                 CurrentHealth = 100,
                 Attack = 20
             };
+
             return Ok(character);
         }
 
@@ -54,12 +62,13 @@ namespace DefinitelyNotFF7.api.Controllers
         [HttpPost("run/start")]
         public IActionResult StartRun()
         {
-
             var character = new Character
             {
                 Name = "Definitely Not Cloud",
                 MaxHealth = 100,
                 CurrentHealth = 100,
+                MaxMp = 35,
+                CurrentMp = 35,
                 CurrentAtb = 0,
                 MaxAtb = 2,
                 Attack = 20,
@@ -68,306 +77,20 @@ namespace DefinitelyNotFF7.api.Controllers
                 XpToNextLevel = 100
             };
 
-            currentSession = new GameSession
+            _gameState.CurrentSession = new GameSession
             {
                 Character = character,
                 IsActive = true
             };
 
-            currentBattle = null;
+            _gameState.CurrentBattle = null;
 
-            if (currentProgress == null)
+            if (_gameState.CurrentProgress == null)
             {
-                currentProgress = CreatePlayerProgress();
+                _gameState.CurrentProgress = _battleOutcome.CreatePlayerProgress();
             }
 
-            return Ok(currentSession);
-        }
-
-        [HttpPost("battle/start")]
-        public IActionResult StartBattle(string enemyType)
-        {
-            // Makes sure players cant start a battle without starting a run
-            if (currentSession == null || currentSession.IsActive == false)
-            {
-                return BadRequest("No active run. Start a new run first.");
-            }
-
-            // Prevent players from skipping an unfinished encounter.
-            if (currentBattle != null && currentBattle.Winner == null)
-            {
-                return BadRequest("A battle is already in progress.");
-            }
-
-            var enemyFactory = new EnemyFactory();
-
-            Enemy enemy;
-            int floor = currentSession.EncounterNumber + 1;
-            try
-            {        
-                enemy = enemyFactory.CreateEnemy(enemyType, floor);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            // Reuse the same character so progression persists between encounters.
-            currentBattle = new Battle
-            {
-                Character = currentSession.Character,
-                Enemy = enemy,
-                CurrentFloor = floor
-            };
-
-
-            return Ok(currentBattle);
-        }
-
-        [HttpPost("battle/attack")]
-        public IActionResult BattleAttack()
-        {
-            if (currentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (currentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            var battleService = new BattleService();
-
-            battleService.Attack(currentBattle);
-
-            if (currentBattle.Enemy.CurrentHealth > 0)
-            {
-                battleService.EnemyAttack(currentBattle);
-            }
-
-            battleService.CheckWinner(currentBattle);
-            HandleBattleOutcome();
-
-            return Ok(currentBattle);
-        }
-
-        [HttpPost("battle/ability")]
-        public IActionResult BattleAbility(string ability)
-        {
-            if (currentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (currentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            if (currentProgress == null || !currentProgress.UnlockedAbilities.Contains(ability))
-            {
-                return BadRequest("Ability is not unlocked.");
-            }
-
-
-            var battleService = new BattleService();
-
-            try
-            {
-                switch (ability)
-                {
-                    case "Braver":
-                        battleService.Braver(currentBattle);
-                        break;
-
-                    case "FocusedThrust":
-                        battleService.FocusedThrust(currentBattle);
-                        break;
-
-                    default:
-                        return BadRequest("Unknown ability.");
-
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            if (currentBattle.Enemy.CurrentHealth > 0)
-            {
-                battleService.EnemyAttack(currentBattle);
-            }
-
-            battleService.CheckWinner(currentBattle);
-            HandleBattleOutcome();
-
-            return Ok(currentBattle);
-        }
-
-        [HttpGet("battle")]
-        public IActionResult GetBattle()
-        {
-            if (currentBattle == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(currentBattle);
-
-        }
-
-        [HttpPost("battle/defend")]
-        public IActionResult BattleDefend()
-        {
-            if (currentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (currentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            var battleService = new BattleService();
-
-            battleService.Defend(currentBattle);
-
-            battleService.CheckWinner(currentBattle);
-            HandleBattleOutcome();
-
-            return Ok(currentBattle);
-        }
-
-        [HttpPost("battle/potion")]
-        public IActionResult BattlePotion()
-        {
-
-            if (currentSession == null || currentSession.IsActive == false)
-            {
-                return BadRequest("No active run. Start a new run first.");
-            }
-
-            if (currentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (currentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            if (currentSession.Potions <= 0)
-            {
-                return BadRequest("No potions left in inventory.");
-            }
-
-            if (currentBattle.Character.CurrentHealth >= currentBattle.Character.MaxHealth)
-            {
-                return BadRequest($"{currentBattle.Character.Name} has full health");
-            }
-
-            var healingService = new HealingService();
-            var battleService = new BattleService();
-
-            healingService.UsePotion(currentBattle.Character);
-            currentSession.Potions--;
-            if (currentBattle.Enemy.CurrentHealth > 0)
-            {
-                battleService.EnemyAttack(currentBattle);
-            }
-
-            battleService.CheckWinner(currentBattle);
-            HandleBattleOutcome();
-
-            return Ok(new
-            {
-                Battle = currentBattle,
-                PotionsRemaining = currentSession.Potions
-            });
-        }
-
-        private void AwardBattleXp()
-        {
-            if (currentBattle == null)
-            {
-                return;
-            }
-            var levelingService = new LevelingService();
-
-            if (currentBattle.Winner == currentBattle.Character.Name)
-            {
-                levelingService.GainXp(currentBattle.Character, currentBattle.Enemy.XpReward);
-
-                CheckAbilityUnlocks();
-            }
-        }
-
-        private void CheckRunEnd()
-        {
-            if (currentBattle != null && currentSession != null && currentBattle.Winner == currentBattle.Enemy.Name)
-            {
-                currentSession.IsActive = false;
-            }
-        }
-
-        private PlayerProgress CreatePlayerProgress()
-        {
-            var progress = new PlayerProgress
-            {
-                UnlockedAbilities = new List<string> { "Braver" }
-            };
-            return progress;
-        }
-
-        private void CheckAbilityUnlocks()
-        {
-            if (currentSession != null && currentProgress != null)
-            {
-                if (currentSession.Character.Level >= 3 && !currentProgress.UnlockedAbilities.Contains("FocusedThrust"))
-                {
-                    currentProgress.UnlockedAbilities.Add("FocusedThrust");
-                }
-            }
-        }
-
-        private void HandleBattleOutcome()
-        {
-            if (currentBattle == null || currentBattle.Winner == null)
-            {
-                return;
-            }
-
-            if (currentBattle.IsOutcomeProcessed)
-            {
-                return;
-            }
-
-
-
-            currentBattle.IsOutcomeProcessed = true;
-
-            if (currentBattle.Winner == currentBattle.Character.Name && currentSession != null)
-            {
-                AwardBattleXp();
-                var healingService = new HealingService();
-                healingService.HealCharacter(currentBattle.Character);
-                currentSession.EncounterNumber++;
-                int roll = Random.Shared.Next(1, 101);
-
-                if (roll <= 30)
-                {
-                    currentSession.Potions++;
-                    currentBattle.PotionDropped = true;
-                }
-            }
-            else if (currentBattle.Winner == currentBattle.Enemy.Name)
-            {
-                CheckRunEnd();
-            }
+            return Ok(_gameState.CurrentSession);
         }
     }
 }
