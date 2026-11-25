@@ -15,5 +15,6 @@
         public int CurrentMp { get; set; }
         public int MateriaSlots { get; set; } = 2;
         public List<Materia> EquippedMateria { get; set; } = new();
+        public bool IsDefending { get; set; } = false;
     }
 }

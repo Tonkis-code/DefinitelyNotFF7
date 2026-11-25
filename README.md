@@ -87,6 +87,8 @@ DefinitelyNotFF7/
 │       │   └── EnemyFactory.cs
 │       ├── Models/
 │       │   ├── Battle.cs
+│       │   ├── BattleActionRequest.cs
+│       │   ├── BattleActionType.cs
 │       │   ├── Character.cs
 │       │   ├── Enemy.cs
 │       │   ├── GameSession.cs
@@ -125,8 +127,45 @@ Currently implemented:
 - Prevention of combat actions after a battle has ended
 - Prevention of starting another encounter during an unfinished battle
 - Potion usage during combat
+- A single turn endpoint for all combat actions
 
 Combat logic is handled by `BattleService`, while `BattleOutcomeService` processes the consequences of winning or losing an encounter.
+
+#### Taking a Turn
+
+Every combat action goes through one endpoint:
+
+```http
+POST /api/Battle/turn
+```
+
+The request body says which action the player chose:
+
+```json
+{ "type": 0 }
+```
+
+| `type` | Action | Extra fields |
+|---:|---|---|
+| 0 | Attack | — |
+| 1 | Defend | — |
+| 2 | Ability | `ability` (for example `"Braver"`) |
+| 3 | Potion | — |
+
+Each turn follows the same order:
+
+1. Shared checks: a run is active, a battle exists and it hasn't ended
+2. The chosen action, including any checks that only apply to it
+3. The enemy attacks back if it is still alive
+4. Winner detection and battle outcome processing
+
+Because steps 1, 3 and 4 are shared, new actions only need to add their own logic in step 2.
+
+#### Defending
+
+Defending doesn't deal damage itself. It sets an `IsDefending` flag on the character and grants 1 ATB.
+
+When the enemy attacks that turn, the damage is halved and the flag is cleared, so a defense only protects against a single hit.
 
 ### ⚡ ATB and Abilities
 
@@ -141,15 +180,21 @@ Currently implemented abilities:
 | Braver | 1 | Deals 2× normal attack damage |
 | Focused Thrust | 2 | Deals 4× normal attack damage |
 
-Abilities are executed through a single API endpoint:
+Abilities are used through the turn endpoint with `type` set to `2` and the ability's name:
 
 ```http
-POST /api/Battle/ability?ability=Braver
+POST /api/Battle/turn
 ```
 
-```http
-POST /api/Battle/ability?ability=FocusedThrust
+```json
+{ "type": 2, "ability": "Braver" }
 ```
+
+```json
+{ "type": 2, "ability": "FocusedThrust" }
+```
+
+Sending an Ability turn without an ability name returns `400 Bad Request`.
 
 Attempting to use an ability without enough ATB returns a `400 Bad Request` response.
 
@@ -259,10 +304,14 @@ HP and MP cannot exceed their respective maximum values.
 
 Players currently start each run with **3 Potions**.
 
-Potions can be used during combat through:
+Potions can be used during combat through the turn endpoint:
 
 ```http
-POST /api/Battle/potion
+POST /api/Battle/turn
+```
+
+```json
+{ "type": 3 }
 ```
 
 Using a Potion:
@@ -395,10 +444,9 @@ Responsible for:
 
 - Starting encounters
 - Retrieving the current battle
-- Attacking
-- Defending
-- Using abilities
-- Using Potions
+- Taking turns (attacking, defending, using abilities and using Potions) through a single `turn` endpoint
+
+The turn endpoint replaced four separate action endpoints (`attack`, `ability`, `defend` and `potion`), which each repeated the same validation and end-of-turn logic.
 
 ### Services
 
@@ -445,10 +493,7 @@ The current API can be tested through Swagger UI.
 |---|---|---|
 | GET | `/api/Battle` | Returns the current battle |
 | POST | `/api/Battle/start?enemyType=Grunt` | Starts an encounter |
-| POST | `/api/Battle/attack` | Performs a basic attack |
-| POST | `/api/Battle/ability?ability=Braver` | Uses a selected ability |
-| POST | `/api/Battle/defend` | Defends against an enemy attack |
-| POST | `/api/Battle/potion` | Uses a Potion during combat |
+| POST | `/api/Battle/turn` | Takes a turn: attack, defend, use an ability or use a Potion (see [Taking a Turn](#taking-a-turn)) |
 
 The character and enemy GET endpoints currently return sample objects rather than the active session's character or selected enemy.
 
@@ -484,6 +529,15 @@ An actual Swagger response after defeating a Scorpion, leveling up, receiving po
   "isOutcomeProcessed": true,
   "currentFloor": 1,
   "potionDropped": true
+}
+```
+
+This example was recorded before the turn endpoint existed. Turn responses now wrap the battle together with the Potion count, and the character also includes an `isDefending` field:
+
+```json
+{
+  "battle": { "character": { "...": "..." }, "enemy": { "...": "..." } },
+  "potionsRemaining": 3
 }
 ```
 

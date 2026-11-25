@@ -70,114 +70,13 @@ namespace DefinitelyNotFF7.api.Controllers
             return Ok(_gameState.CurrentBattle);
         }
 
-        [HttpPost("attack")]
-        public IActionResult BattleAttack()
+
+        [HttpPost("turn")]
+        public IActionResult TakeTurn([FromBody] BattleActionRequest request)
         {
-            if (_gameState.CurrentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (_gameState.CurrentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
+            var healingService = new HealingService();
             var battleService = new BattleService();
 
-            battleService.Attack(_gameState.CurrentBattle);
-
-            if (_gameState.CurrentBattle.Enemy.CurrentHealth > 0)
-            {
-                battleService.EnemyAttack(_gameState.CurrentBattle);
-            }
-
-            battleService.CheckWinner(_gameState.CurrentBattle);
-            _battleOutcome.HandleBattleOutcome();
-
-            return Ok(_gameState.CurrentBattle);
-        }
-
-        [HttpPost("ability")]
-        public IActionResult BattleAbility(string ability)
-        {
-            if (_gameState.CurrentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (_gameState.CurrentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            if (_gameState.CurrentProgress == null ||
-                !_gameState.CurrentProgress.UnlockedAbilities.Contains(ability))
-            {
-                return BadRequest("Ability is not unlocked.");
-            }
-
-            var battleService = new BattleService();
-
-            try
-            {
-                switch (ability)
-                {
-                    case "Braver":
-                        battleService.Braver(_gameState.CurrentBattle);
-                        break;
-
-                    case "FocusedThrust":
-                        battleService.FocusedThrust(_gameState.CurrentBattle);
-                        break;
-
-                    default:
-                        return BadRequest("Unknown ability.");
-                }
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-
-            if (_gameState.CurrentBattle.Enemy.CurrentHealth > 0)
-            {
-                battleService.EnemyAttack(_gameState.CurrentBattle);
-            }
-
-            battleService.CheckWinner(_gameState.CurrentBattle);
-            _battleOutcome.HandleBattleOutcome();
-
-            return Ok(_gameState.CurrentBattle);
-        }
-
-
-        [HttpPost("defend")]
-        public IActionResult BattleDefend()
-        {
-            if (_gameState.CurrentBattle == null)
-            {
-                return NotFound();
-            }
-
-            if (_gameState.CurrentBattle.Winner != null)
-            {
-                return BadRequest("The battle is already over.");
-            }
-
-            var battleService = new BattleService();
-
-            battleService.Defend(_gameState.CurrentBattle);
-
-            battleService.CheckWinner(_gameState.CurrentBattle);
-            _battleOutcome.HandleBattleOutcome();
-
-            return Ok(_gameState.CurrentBattle);
-        }
-
-        [HttpPost("potion")]
-        public IActionResult BattlePotion()
-        {
             if (_gameState.CurrentSession == null || _gameState.CurrentSession.IsActive == false)
             {
                 return BadRequest("No active run. Start a new run first.");
@@ -193,22 +92,71 @@ namespace DefinitelyNotFF7.api.Controllers
                 return BadRequest("The battle is already over.");
             }
 
-            if (_gameState.CurrentSession.Potions <= 0)
+
+
+            switch (request.Type)
             {
-                return BadRequest("No potions left in inventory.");
+                case BattleActionType.Attack:
+                    battleService.Attack(_gameState.CurrentBattle);
+                    break;
+
+                case BattleActionType.Defend:
+                    battleService.Defend(_gameState.CurrentBattle);
+                    break;
+
+                case BattleActionType.Ability:
+
+                    if (string.IsNullOrWhiteSpace(request.Ability))
+                    {
+                        return BadRequest("No ability chosen.");
+                    }
+
+                    if (_gameState.CurrentProgress == null ||
+                        !_gameState.CurrentProgress.UnlockedAbilities.Contains(request.Ability))
+                    {
+                        return BadRequest("Ability is not unlocked.");
+                    }
+                    try
+                    {
+                        switch (request.Ability)
+                        {
+                            case "Braver":
+                                battleService.Braver(_gameState.CurrentBattle);
+                                break;
+
+                            case "FocusedThrust":
+                                battleService.FocusedThrust(_gameState.CurrentBattle);
+                                break;
+
+                            default:
+                                return BadRequest("Unknown ability.");
+                        }
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return BadRequest(ex.Message);
+                    }
+                    break;
+
+                case BattleActionType.Potion:
+                    if (_gameState.CurrentSession.Potions <= 0)
+                    {
+                        return BadRequest("No potions left in inventory.");
+                    }
+
+                    if (_gameState.CurrentBattle.Character.CurrentHealth >=
+                        _gameState.CurrentBattle.Character.MaxHealth)
+                    {
+                        return BadRequest($"{_gameState.CurrentBattle.Character.Name} has full health");
+                    }
+                    healingService.UsePotion(_gameState.CurrentBattle.Character);
+                    _gameState.CurrentSession.Potions--;
+                    break;
+
+                default:
+                    return BadRequest("Unknown action.");
+
             }
-
-            if (_gameState.CurrentBattle.Character.CurrentHealth >=
-                _gameState.CurrentBattle.Character.MaxHealth)
-            {
-                return BadRequest($"{_gameState.CurrentBattle.Character.Name} has full health");
-            }
-
-            var healingService = new HealingService();
-            var battleService = new BattleService();
-
-            healingService.UsePotion(_gameState.CurrentBattle.Character);
-            _gameState.CurrentSession.Potions--;
 
             if (_gameState.CurrentBattle.Enemy.CurrentHealth > 0)
             {

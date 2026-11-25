@@ -18,17 +18,16 @@ namespace DefinitelyNotFF7.api.Services
         // EnemyAttack checks damage based on defined values of Enemy and their Attack value and subtracts it from Character Health
         public int EnemyAttack(Battle battle)
         {
-            int damage = battle.Enemy.Attack;
+            int damage = battle.Character.IsDefending ? battle.Enemy.Attack /2 : battle.Enemy.Attack;
+            battle.Character.IsDefending = false;
             battle.Character.CurrentHealth = Math.Max(0, battle.Character.CurrentHealth - damage);
             return damage;
         }
 
-        public int Defend(Battle battle)
+        public void Defend(Battle battle)
         {
-            int damage = battle.Enemy.Attack / 2;
-            battle.Character.CurrentHealth = Math.Max(0, battle.Character.CurrentHealth - damage);
+            battle.Character.IsDefending = true;
             battle.Character.CurrentAtb = Math.Min(battle.Character.MaxAtb, battle.Character.CurrentAtb + 1);
-            return damage;
         }
 
         public int Braver(Battle battle)
