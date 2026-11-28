@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DefinitelyNotFF7 is a learning project: a turn-based roguelite with an ASP.NET Core backend (`backend/`) and a planned TypeScript + Phaser + Vite frontend (`frontend/`, not yet created). The owner is using it to learn C#/.NET, so prefer clear, idiomatic code and explain non-obvious C# or ASP.NET concepts when introducing them. The final game must use original characters, assets and worldbuilding. The "Definitely Not ..." names are placeholder parody names.
 
+## How to work with the owner
+
+The owner writes all game code themselves. Claude acts as a mentor (see `.claude/output-styles/mentor.md`, selected with `/output-style Mentor`):
+- Don't create, edit or delete project files, and don't give drop-in solutions. Teach with short, parallel examples and explain *why* they work. Reading files and running `dotnet build` / `dotnet test` is fine.
+- Exception: when the owner explicitly writes "write it for me", do that one specific piece. Documentation (`README.md`, this file) has been handled this way.
+- Ask **one question per reply** and move in small steps. Stacking several questions at once has been overwhelming.
+- When reviewing, read the actual changes (`git diff`) and build before giving feedback. Ask the owner to explain their code before critiquing it.
+- Encourage "predict, then test in Swagger" for bugs, and asking what should be tested when game logic changes.
+- Concepts covered so far: enums, `required` vs nullable (`?`), class vs instance (`request.Ability`, not `BattleActionRequest.Ability`), guard clauses and nullable flow analysis, `void` vs return types, the ternary operator, `[FromBody]`, `switch` with `break` vs `return`, `try/catch` only catching thrown exceptions.
+
 ## Commands
 
 Run from `backend/` (solution file: `backend.slnx`, target `net10.0`):
@@ -52,5 +62,15 @@ Conventions and gotchas:
 - `EnemyFactory.CreateEnemy(type, floor)` scales enemy HP by +10% and attack by +5% per floor after the first. Floor = `EncounterNumber + 1`.
 - Models are returned directly as API responses (no DTOs yet), so new model properties such as `Character.IsDefending` show up in responses. `GET /api/Battle` and `POST /api/Battle/start` return the `Battle` itself, while `/turn` wraps it as `{ battle, potionsRemaining }`.
 - `GET /api/Game/character` and `/enemy` return hardcoded sample objects, not live state.
+
+## Status and next steps
+
+Done most recently (commit `9aa4d97`): merged the `attack`, `ability`, `defend` and `potion` endpoints into `POST /api/Battle/turn`, and moved Defend's damage reduction into `EnemyAttack` via `IsDefending` (this fixed Defend dealing 1.5× damage and the defense never wearing off).
+
+Next, in order:
+1. **`AbilityType` enum** to replace ability name strings in `BattleActionRequest.Ability`, `PlayerProgress.UnlockedAbilities`, `BattleOutcomeService` and the inner switch. Needs `JsonStringEnumConverter` in `Program.cs` so clients can send `"Braver"`. Open question for the owner: should `Ability` be `AbilityType` or `AbilityType?`
+2. Small cleanups in `TakeTurn`: leftover blank lines, the outdated comment on `EnemyAttack`.
+3. A test project (xUnit), starting with `BattleService` rules such as Defend halving one hit.
+4. Returning a turn result/log (damage dealt and taken) instead of discarding the damage values, for the future Phaser frontend.
 
 Work in progress: the Materia system. `Materia` model plus `Character.MateriaSlots`/`EquippedMateria` exist, and MP is tracked and restored, but nothing equips Materia or spends MP yet. Planned later: EF Core + PostgreSQL (via Docker), auth and per-player state replacing the singleton, DTOs, and automated tests.
